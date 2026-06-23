@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# pyproject for governed_inference_meter — also distributable as a standalone
+# package. On the Hugging Face Hub this repo is loaded via `kernels.get_kernel`
+# (see build.toml + build/torch-universal/). The package source lives under
+# build/torch-universal/governed_inference_meter/ so it is byte-identical
+# whether loaded from the Hub or pip-installed from a checkout.
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "governed-inference-meter"
+version = "0.1.0"
+description = "Energy-metered, governed inference receipts: NVML joules, tokens/joule, an advisory policy gate, and a tamper-evident SHA-256 hash-chained receipt. Honest by design — MEASURED only with NVML."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Stephen Lutar", email = "stephenlutar2@gmail.com" }]
+keywords = [
+  "kernel",
+  "inference",
+  "energy",
+  "nvml",
+  "governance",
+  "provenance",
+  "audit",
+  "receipts",
+  "tokens-per-joule",
+  "sovereign-ai",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+# Core has ZERO hard dependencies (stdlib only). NVML metering is optional.
+dependencies = []
+
+[project.optional-dependencies]
+# Real GPU energy measurement requires NVML bindings.
+gpu = ["pynvml>=11.0.0"]
+# torch is optional and only used to synchronize CUDA around the metered call.
+torch = ["torch"]
+test = ["pytest"]
+
+[project.urls]
+Homepage = "https://a11oy.net"
+"Hugging Face" = "https://huggingface.co/SZLHOLDINGS/governed-inference-meter"
+
+[tool.setuptools]
+package-dir = { "" = "build/torch-universal" }
+
+[tool.setuptools.packages.find]
+where = ["build/torch-universal"]

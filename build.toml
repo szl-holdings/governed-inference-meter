@@ -1,0 +1,5 @@
+[general]
+name = "governed_inference_meter"
+
+[torch]
+universal = true

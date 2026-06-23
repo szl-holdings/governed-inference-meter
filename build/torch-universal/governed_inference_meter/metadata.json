@@ -1,0 +1,31 @@
+{
+  "name": "governed_inference_meter",
+  "version": "0.1.0",
+  "universal": true,
+  "kind": "metering-utility",
+  "backends": [
+    "cpu",
+    "cuda"
+  ],
+  "measurement": {
+    "energy_source": "NVML (pynvml)",
+    "modes": [
+      "measured-energy",
+      "measured-power-integral",
+      "unmeasured"
+    ],
+    "fabricates_energy_when_unavailable": false
+  },
+  "governance": {
+    "policy_gate": "advisory, host-enforced, defaults to allow_all",
+    "receipt": "SHA-256 hash-chained JSON (tamper-evident, not a signature)"
+  },
+  "doctrine": {
+    "lambda": "Conjecture 1 (advisory, NOT a theorem)",
+    "trust": "never 100%",
+    "honest_labels": ["MEASURED", "MODELED", "SAMPLE", "unmeasured"]
+  },
+  "author": "SZL Holdings",
+  "contact": "Stephen Lutar <stephenlutar2@gmail.com>",
+  "license": "Apache-2.0"
+}

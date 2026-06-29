@@ -46,7 +46,7 @@ torch = ["torch"]
 test = ["pytest"]
 
 [project.urls]
-Homepage = "https://a11oy.net"
+Homepage = "https://a-11-oy.com"
 "Hugging Face" = "https://huggingface.co/SZLHOLDINGS/governed-inference-meter"
 
 [tool.setuptools]

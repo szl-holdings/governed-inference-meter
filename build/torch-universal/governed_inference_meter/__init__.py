@@ -13,7 +13,7 @@ that wraps an inference call and emits a GOVERNED, ENERGY-METERED RECEIPT:
 
 It is the energy+governance counterpart to SZL Holdings'
 ``SZLHOLDINGS/szl-governed-norm`` — provenance at the inference boundary, in
-the spirit of the a11oy governed-AI platform (https://a11oy.net).
+the spirit of the a11oy governed-AI platform (https://a-11-oy.com).
 
 Load from the Hub::
 

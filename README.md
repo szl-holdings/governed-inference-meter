@@ -30,7 +30,7 @@ call and emits a **governed, energy-metered, tamper-evident receipt**:
 It is the energy + governance counterpart to
 [`SZLHOLDINGS/szl-governed-norm`](https://huggingface.co/SZLHOLDINGS/szl-governed-norm)
 — provenance at the inference boundary, in the spirit of the
-[a11oy](https://a11oy.net) governed-AI platform: **receipts, not capability
+[a11oy](https://a-11-oy.com) governed-AI platform: **receipts, not capability
 claims.**
 
 > **Why this exists.** Browse the [Kernel Hub](https://huggingface.co/models?other=kernel)
@@ -224,5 +224,5 @@ LICENSE                                     # Apache-2.0
 > measured.
 
 **License:** Apache-2.0 · **Maintainer:** Stephen Lutar
-<stephenlutar2@gmail.com> · **Platform:** [a11oy.net](https://a11oy.net) — the
+<stephenlutar2@gmail.com> · **Platform:** [a-11-oy.com](https://a-11-oy.com) — the
 governed-inference substrate for hard missions.

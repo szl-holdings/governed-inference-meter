@@ -43,6 +43,9 @@ dependencies = []
 gpu = ["pynvml>=11.0.0"]
 # torch is optional and only used to synchronize CUDA around the metered call.
 torch = ["torch"]
+# Optional DSSE/ECDSA-P256 signing of receipts via the shared szl-receipt lib.
+# Core stays zero-hard-dependency: signing is opt-in and import is lazy.
+sign = ["szl-receipt>=0.1.0"]
 test = ["pytest"]
 
 [project.urls]

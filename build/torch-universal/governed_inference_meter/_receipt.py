@@ -24,10 +24,36 @@ import hashlib
 import json
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 # Genesis previous-hash for the first receipt in any chain.
 _GENESIS = "0" * 64
+
+# Logical signing-authority label stamped onto signature envelopes.
+_ORGAN = "governed-inference-meter"
+
+
+def _maybe_sign(
+    body: Dict[str, Any],
+    sign_key: Optional[Union[str, bytes]],
+    organ: str,
+) -> Optional[Dict[str, Any]]:
+    """ADDITIVE szl-receipt signature layer over the receipt *body*.
+
+    Returns a DSSE envelope (from ``szl_receipt.sign_receipt``) covering the
+    exact canonical body, or ``None`` when szl-receipt is not installed (the
+    module then behaves exactly as before — stdlib-only). Doctrine: with no
+    *sign_key* the envelope is UNSIGNED-honest (``signed=False``); a signature
+    is NEVER fabricated. The chain ``digest`` is computed independently and is
+    unaffected — this is a pure add-on alongside the existing tamper-evidence.
+    """
+    try:
+        from szl_receipt import Receipt, sign_receipt
+    except Exception:  # noqa: BLE001 - signing is optional; absence is honest
+        return None
+    env = sign_receipt(Receipt(kind="governed-inference", body=body),
+                       sign_key, organ=organ)
+    return env
 
 # Canonical field order of the *body* that gets hashed (ts/digest excluded).
 _BODY_FIELDS = (
@@ -76,8 +102,16 @@ class ReceiptChain:
         energy: Dict[str, Any],
         policy_decision: str,
         policy_reason: str,
+        sign_key: Optional[Union[str, bytes]] = None,
+        organ: str = _ORGAN,
     ) -> Dict[str, Any]:
-        """Append one receipt and return it (a copy is safe to share)."""
+        """Append one receipt and return it (a copy is safe to share).
+
+        If *sign_key* (a PEM ECDSA-P256 private key) is supplied AND szl-receipt
+        is installed, the returned record carries an additive ``signature``
+        DSSE envelope. With no key the envelope is UNSIGNED-honest; with no
+        szl-receipt the record is unchanged. The hash chain is never altered.
+        """
         with self._lock:
             prev = self._records[-1]["digest"] if self._records else _GENESIS
             seq = len(self._records)
@@ -103,6 +137,9 @@ class ReceiptChain:
             }
             digest = _digest_body(body)
             rec = dict(body, digest=digest, ts=time.time())
+            sig = _maybe_sign(body, sign_key, organ)
+            if sig is not None:
+                rec["signature"] = sig
             self._records.append(rec)
             return dict(rec)
 

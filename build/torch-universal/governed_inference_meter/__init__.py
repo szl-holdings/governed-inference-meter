@@ -128,6 +128,8 @@ def meter(
     chain: Optional[ReceiptChain] = None,
     device_index: int = 0,
     sample_hz: float = 100.0,
+    sign_key: Optional[Any] = None,
+    organ: str = "governed-inference-meter",
 ) -> Tuple[Dict[str, Any], Any]:
     """Run ``fn(*args, **kwargs)`` under an energy meter + policy gate.
 
@@ -161,6 +163,8 @@ def meter(
             energy={"mode": MODE_UNMEASURED, "joules": None, "wall_seconds": 0.0},
             policy_decision=decision.decision,
             policy_reason=decision.reason,
+            sign_key=sign_key,
+            organ=organ,
         )
         return rec, None
 
@@ -180,6 +184,8 @@ def meter(
         energy=energy,
         policy_decision=decision.decision,
         policy_reason=decision.reason,
+        sign_key=sign_key,
+        organ=organ,
     )
     return rec, output
 
@@ -194,6 +200,8 @@ def metered(
     chain: Optional[ReceiptChain] = None,
     device_index: int = 0,
     sample_hz: float = 100.0,
+    sign_key: Optional[Any] = None,
+    organ: str = "governed-inference-meter",
 ):
     """Context-manager form. Yields a mutable ``state`` dict; on exit it holds
     ``state["receipt"]``. The policy gate is evaluated on entry; on DENY the
@@ -227,6 +235,8 @@ def metered(
             energy=energy,
             policy_decision=decision.decision,
             policy_reason=decision.reason,
+            sign_key=sign_key,
+            organ=organ,
         )
 
 

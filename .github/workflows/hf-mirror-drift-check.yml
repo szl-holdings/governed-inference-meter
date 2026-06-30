@@ -1,0 +1,28 @@
+name: hf-mirror-drift-check
+
+# Independently assert the live HF model == the GitHub mirror set (sha256).
+# Informational on push/PR (the model only updates on tagged mirror runs, so main
+# may legitimately lead between releases); authoritative on a tag and daily.
+on:
+  pull_request:
+    paths: ["build/**", "build.toml", "pyproject.toml", "README.md", "scripts/hf_mirror_drift_check.py"]
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+        with:
+          python-version: "3.12"
+      - name: Assert HF model == GitHub mirror set
+        # Informational on PR (main may legitimately lead HF between tagged releases);
+        # authoritative on schedule + manual dispatch.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        run: python scripts/hf_mirror_drift_check.py

@@ -1,0 +1,35 @@
+name: hf-mirror
+
+# Mirror the tracked kernel package to HF model SZLHOLDINGS/governed-inference-meter
+# on every version tag (vX.Y.Z), published release, and manual dispatch. GitHub stays
+# the source-of-truth; the Kernel Hub copy (loaded via get_kernel(...)) can never lag.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+        with:
+          python-version: "3.12"
+      - run: pip install "huggingface_hub>=0.24"
+      - name: Mirror kernel to HF model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python scripts/hf_mirror.py --token "$HF_TOKEN"
+      - name: Attest model == source
+        run: python scripts/hf_mirror_drift_check.py

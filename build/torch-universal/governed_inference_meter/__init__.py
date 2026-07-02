@@ -57,7 +57,15 @@ import contextlib
 import time
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
-from . import _energy, _policy, _receipt
+from . import _attest, _energy, _policy, _receipt
+from ._attest import (
+    IN_TOTO_STATEMENT_TYPE,
+    SZL_PREDICATE_TYPE,
+    attest,
+    compliance_evidence,
+    to_intoto_statement,
+    verify_statement,
+)
 from ._energy import (
     MODE_ENERGY_COUNTER,
     MODE_POWER_INTEGRAL,
@@ -84,6 +92,12 @@ __all__ = [
     "receipt_tail",
     "receipt_verify",
     "selfcheck",
+    "attest",
+    "to_intoto_statement",
+    "compliance_evidence",
+    "verify_statement",
+    "IN_TOTO_STATEMENT_TYPE",
+    "SZL_PREDICATE_TYPE",
     "DOCTRINE_FOOTER",
     "MODE_UNMEASURED",
     "MODE_ENERGY_COUNTER",
@@ -93,7 +107,7 @@ __all__ = [
     "__version__",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 DOCTRINE_FOOTER = (
     "SZL Holdings · governed, energy-metered inference receipts · "
     "MEASURED only with NVML · policy gate is advisory (host-enforced) · "

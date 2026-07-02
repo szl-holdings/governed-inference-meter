@@ -197,6 +197,44 @@ that mutating a past record is detected. It requires no GPU.
 
 ---
 
+## Attestation & compliance evidence (interop layer)
+
+A receipt is only as useful as the tools that can *carry* it. This module renders
+any receipt into the formats the wider ecosystem already understands — without
+changing a single measured value.
+
+```python
+import governed_inference_meter as gim
+
+rec, out = gim.meter(run, args=("hi",), model="my-llm", tokens_in=2, tokens_out=7)
+
+# 1) The receipt as an in-toto Statement v1 — the exact payload that
+#    Sigstore / DSSE / SCITT tooling signs and stores in a transparency log.
+stmt = gim.to_intoto_statement(rec)          # SLSA-shaped predicate, our own type URI
+
+# 2) EU AI Act / NIST AI RMF controls this receipt provides EVIDENCE for,
+#    with an explicit does_not_establish note per control (honest, not a cert).
+ev = gim.compliance_evidence(rec)
+
+# 3) Confirm the Statement is cryptographically bound to this exact receipt.
+ok, why = gim.verify_statement(stmt, rec)    # -> (True, "ok")
+```
+
+Honest boundaries (doctrine):
+
+- The predicate uses **our own** `predicateType` URI and is only SLSA-*shaped*
+  for auditor recognizability — it is **not** a claim of official SLSA
+  conformance. Signing (DSSE/Sigstore) is out-of-band; this emits the unsigned
+  Statement payload a signer would then cover.
+- Energy fields are copied **verbatim**. On an unmeasured receipt, energy-dependent
+  controls (e.g. `NIST-AI-RMF-MEASURE-2.x`) report **`UNAVAILABLE`** — never a
+  fabricated joule. Logging / record-keeping controls (EU AI Act Art. 12 & 19)
+  are supported regardless of GPU.
+- A receipt is **evidence** toward a control, never a conformity assessment,
+  certification, or safety guarantee.
+
+---
+
 ## What's in the repo
 
 ```
@@ -206,9 +244,11 @@ build/torch-universal/governed_inference_meter/
   _energy.py      # NVML energy + power-integral measurement, honest degrade
   _receipt.py     # SHA-256 hash-chained, tamper-evident receipts
   _policy.py      # advisory policy gate (allow_all default, fail-closed)
+  _attest.py      # in-toto/SLSA-shaped Statements + EU AI Act / NIST AI RMF evidence
   metadata.json
 pyproject.toml                              # also pip-installable from source
 tests/test_meter.py                         # runs on CPU, no GPU needed
+tests/test_attest.py                        # attestation + compliance, no GPU needed
 LICENSE                                     # Apache-2.0
 ```
 

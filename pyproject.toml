@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "governed-inference-meter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Energy-metered, governed inference receipts: NVML joules, tokens/joule, an advisory policy gate, and a tamper-evident SHA-256 hash-chained receipt. Honest by design — MEASURED only with NVML."
 readme = "README.md"
 requires-python = ">=3.8"

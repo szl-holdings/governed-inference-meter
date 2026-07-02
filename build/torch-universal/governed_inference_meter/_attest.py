@@ -9,15 +9,24 @@ hash-chained record of one metered inference call. This module lets that record
   1. :func:`to_intoto_statement` renders a receipt as an **in-toto Statement v1**
      — the exact JSON payload that Sigstore / DSSE / IETF SCITT tooling already
      knows how to carry, sign, and store in a transparency log. The predicate is
-     laid out in SLSA-v1 provenance shape (``buildDefinition`` / ``runDetails``)
-     so an auditor recognizes it on sight.
+     laid out in SLSA-v1 provenance shape (``buildDefinition`` / ``runDetails``).
   2. :func:`compliance_evidence` maps the receipt onto the specific **EU AI Act**
      articles and **NIST AI RMF** functions it provides operational evidence for
-     (record-keeping, automatic logging, energy transparency), and — per the
-     honesty doctrine — states plainly what it does **NOT** establish.
+     and — per the honesty doctrine — states plainly what it does **NOT** establish.
   3. :func:`verify_statement` re-derives the receipt body digest and confirms the
-     Statement's subject is bound to that exact receipt, so an attestation can
-     never silently drift from the record it claims to describe.
+     Statement's subject is bound to that exact receipt.
+
+CONSOLIDATION (the ecosystem shapes + regulator catalogue live in ONE place):
+  The in-toto Statement envelope, the SLSA-shaped predicate skeleton, the
+  EU AI Act / NIST AI RMF control catalogue, and the subject-digest verifier are
+  the SHARED :mod:`szl_receipt.attest` module — the same library that already
+  provides receipt signing. This module is a thin, receipt-schema-specific
+  adapter over it: it maps this package's receipt fields onto capability flags
+  and predicate parameters, then delegates the ecosystem-facing shapes. That
+  keeps a single source of truth so the regulator mapping can never drift
+  between SZL packages. Attestation is therefore an interop feature that, like
+  signing, requires the shared ``szl-receipt`` library (install extra ``[sign]``);
+  the import is lazy so importing this package stays zero-hard-dependency.
 
 HONESTY (Λ = Conjecture 1, advisory — NOT a theorem):
   * We emit our OWN predicate type URI. We do NOT claim official SLSA-provenance
@@ -26,27 +35,25 @@ HONESTY (Λ = Conjecture 1, advisory — NOT a theorem):
     ``mode="unmeasured"`` the energy evidence is reported ``UNAVAILABLE`` — never
     a fabricated joule or efficiency number.
   * A receipt is EVIDENCE toward a control, never a conformity assessment,
-    certification, or a safety guarantee. Every mapping entry carries an explicit
+    certification, or safety guarantee. Every mapping entry carries an explicit
     ``does_not_establish`` note.
-  * Stdlib only. Nothing is written to disk or the network from this module.
-    Signing (DSSE/Sigstore) is a separate, out-of-band concern (see
-    ``sign_key`` on the receipt layer); this module produces the *unsigned*
-    Statement payload that such tooling would then sign.
+  * Stdlib only in this module. Nothing is written to disk or the network here;
+    signing (DSSE/Sigstore) is a separate, out-of-band concern.
 """
 import hashlib
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from ._receipt import _BODY_FIELDS, canonical_json
 
-# In-toto Statement envelope type (stable, ecosystem-standard).
+# In-toto Statement envelope type — the stable, ecosystem-standard URI. Defined
+# locally (not imported) so importing this package never requires szl-receipt at
+# import time; it mirrors the identical constant in ``szl_receipt.attest``.
 IN_TOTO_STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 
 # Our OWN predicate type. Honest: this is an SZL predicate, SLSA-*shaped* for
 # recognizability — it is NOT a claim of official SLSA-provenance conformance.
 SZL_PREDICATE_TYPE = "https://a-11-oy.com/attest/governed-inference/v0.1"
-
-_UNAVAILABLE = "UNAVAILABLE"
 
 ATTEST_DOCTRINE = (
     "SZL Holdings · in-toto/SLSA-shaped attestation over an honest, hash-chained "
@@ -55,91 +62,24 @@ ATTEST_DOCTRINE = (
     "Lambda = Conjecture 1 (advisory) · trust never 100%"
 )
 
-# --- Compliance control catalogue -----------------------------------------
-# Each entry states what a governed-inference receipt HONESTLY provides evidence
-# for, and — doctrine-critical — what it does NOT establish. Energy-dependent
-# controls resolve to UNAVAILABLE when the receipt is unmeasured.
-_CONTROLS: List[Dict[str, Any]] = [
-    {
-        "id": "EU-AI-Act-Art-12",
-        "title": "Record-keeping — automatic recording of events (logs)",
-        "kind": "logging",
-        "establishes": (
-            "Each inference call is automatically recorded in a tamper-evident, "
-            "hash-chained log with model id, token counts and the governance "
-            "decision — automatic event logging over the system's operation."
-        ),
-        "does_not_establish": (
-            "Does not itself define log retention duration or the risk-management "
-            "system those logs feed; that is an operator responsibility."
-        ),
-    },
-    {
-        "id": "EU-AI-Act-Art-19",
-        "title": "Automatically generated logs — availability & integrity",
-        "kind": "logging",
-        "establishes": (
-            "The SHA-256 chain makes any post-hoc edit or reordering of the logs "
-            "detectable, so retained logs are demonstrably intact when produced."
-        ),
-        "does_not_establish": (
-            "Does not enforce the retention period or storage of the logs; the "
-            "chain proves integrity, not that logs were kept for the required time."
-        ),
-    },
-    {
-        "id": "EU-AI-Act-Art-15",
-        "title": "Accuracy, robustness and cybersecurity",
-        "kind": "integrity",
-        "establishes": (
-            "Tamper-evidence contributes to record integrity / resistance to "
-            "log manipulation (a cybersecurity-relevant property)."
-        ),
-        "does_not_establish": (
-            "Does NOT establish model accuracy or robustness — it says nothing "
-            "about the correctness of the model's outputs."
-        ),
-    },
-    {
-        "id": "NIST-AI-RMF-MEASURE-2.x",
-        "title": "MEASURE — track quantitative metrics (energy / efficiency)",
-        "kind": "energy",
-        "establishes": (
-            "Measured GPU joules and tokens-per-joule are recorded per call, "
-            "giving an auditable quantitative efficiency/energy metric."
-        ),
-        "does_not_establish": (
-            "When energy is unmeasured no efficiency claim is made; and the "
-            "metric measures cost/energy, not model quality or safety."
-        ),
-    },
-    {
-        "id": "NIST-AI-RMF-MANAGE-4.1",
-        "title": "MANAGE — post-deployment monitoring & logging",
-        "kind": "logging",
-        "establishes": (
-            "A continuous, verifiable per-call log supports ongoing monitoring "
-            "of a deployed system's inference activity and governance decisions."
-        ),
-        "does_not_establish": (
-            "Does not define incident response or remediation; it is the "
-            "monitoring substrate, not the management process itself."
-        ),
-    },
-    {
-        "id": "NIST-AI-RMF-GOVERN-1.x",
-        "title": "GOVERN — documented, auditable governance decisions",
-        "kind": "governance",
-        "establishes": (
-            "The advisory policy decision (allow/deny) and its reason are recorded "
-            "alongside each call, documenting the governance decision made."
-        ),
-        "does_not_establish": (
-            "The gate is ADVISORY and host-enforced; recording a decision is not "
-            "proof the decision was enforced by the runtime."
-        ),
-    },
-]
+
+def _shared():
+    """Lazily import the shared :mod:`szl_receipt.attest` layer.
+
+    Attestation is an interop feature that reuses the ONE canonical home for the
+    ecosystem shapes and the regulator catalogue (the same ``szl-receipt`` library
+    used for signing). If it is not installed we raise a clear, honest error —
+    never a silent, drift-prone local reimplementation.
+    """
+    try:
+        from szl_receipt import attest as _a  # type: ignore
+    except Exception as exc:  # noqa: BLE001
+        raise ImportError(
+            "governed_inference_meter attestation requires the shared 'szl-receipt' "
+            "library (pip install 'governed-inference-meter[sign]', or "
+            "pip install szl-receipt). Underlying import error: %r" % (exc,)
+        ) from exc
+    return _a
 
 
 def _receipt_body(receipt: Dict[str, Any]) -> Dict[str, Any]:
@@ -167,51 +107,49 @@ def to_intoto_statement(
     body digest, so the attestation is inseparable from the exact record it
     describes. All energy fields are copied verbatim (honest ``null`` when the
     receipt was unmeasured). The returned dict is the *unsigned* payload that a
-    DSSE/Sigstore signer would then wrap — signing is out of scope here.
+    DSSE/Sigstore signer would then wrap.
     """
+    a = _shared()
     body = _receipt_body(receipt)
     digest = receipt.get("digest") or _body_digest(body)
     measured = _measured(receipt)
     name = subject_name or "governed-inference-receipt/seq-{}".format(
         receipt.get("seq", "?")
     )
-    predicate = {
-        "buildDefinition": {
-            "buildType": SZL_PREDICATE_TYPE,
-            "externalParameters": {
-                "model": receipt.get("model"),
-                "tokens_in": receipt.get("tokens_in"),
-                "tokens_out": receipt.get("tokens_out"),
-            },
-            "internalParameters": {
-                "policy_decision": receipt.get("policy_decision"),
-                "policy_reason": receipt.get("policy_reason"),
-            },
+    predicate = a.slsa_predicate(
+        build_type=SZL_PREDICATE_TYPE,
+        external_parameters={
+            "model": receipt.get("model"),
+            "tokens_in": receipt.get("tokens_in"),
+            "tokens_out": receipt.get("tokens_out"),
         },
-        "runDetails": {
-            "builder": {"id": SZL_PREDICATE_TYPE},
-            "metadata": {
-                "energy_mode": receipt.get("mode"),
-                "measured": measured,
-                # Verbatim, honest-null when unmeasured. Never fabricated.
-                "joules": receipt.get("joules"),
-                "wall_seconds": receipt.get("wall_seconds"),
-                "tokens_per_joule": receipt.get("tokens_per_joule"),
-            },
-            "receipt": {
-                "seq": receipt.get("seq"),
-                "prev": receipt.get("prev"),
-                "digest": digest,
-            },
+        internal_parameters={
+            "policy_decision": receipt.get("policy_decision"),
+            "policy_reason": receipt.get("policy_reason"),
         },
-        "doctrine": ATTEST_DOCTRINE,
+        builder_id=SZL_PREDICATE_TYPE,
+        metadata={
+            "energy_mode": receipt.get("mode"),
+            "measured": measured,
+            # Verbatim, honest-null when unmeasured. Never fabricated.
+            "joules": receipt.get("joules"),
+            "wall_seconds": receipt.get("wall_seconds"),
+            "tokens_per_joule": receipt.get("tokens_per_joule"),
+        },
+        extra={"doctrine": ATTEST_DOCTRINE},
+    )
+    # Bind the receipt's chain position into the run details (product-specific).
+    predicate["runDetails"]["receipt"] = {
+        "seq": receipt.get("seq"),
+        "prev": receipt.get("prev"),
+        "digest": digest,
     }
-    return {
-        "_type": IN_TOTO_STATEMENT_TYPE,
-        "subject": [{"name": name, "digest": {"sha256": digest}}],
-        "predicateType": SZL_PREDICATE_TYPE,
-        "predicate": predicate,
-    }
+    return a.build_statement(
+        subject_name=name,
+        subject_digest=digest,
+        predicate=predicate,
+        predicate_type=SZL_PREDICATE_TYPE,
+    )
 
 
 def compliance_evidence(receipt: Dict[str, Any]) -> Dict[str, Any]:
@@ -223,36 +161,26 @@ def compliance_evidence(receipt: Dict[str, Any]) -> Dict[str, Any]:
     explicit ``does_not_establish`` note. This is EVIDENCE, never a conformity
     assessment or certification.
     """
+    a = _shared()
     measured = _measured(receipt)
-    controls: List[Dict[str, Any]] = []
-    for c in _CONTROLS:
-        if c["kind"] == "energy" and not measured:
-            status = _UNAVAILABLE
-            note = "energy unmeasured on this receipt — no efficiency evidence"
-        else:
-            status = "supports"
-            note = c["establishes"]
-        controls.append(
-            {
-                "id": c["id"],
-                "title": c["title"],
-                "status": status,
-                "evidence": note,
-                "does_not_establish": c["does_not_establish"],
-            }
-        )
-    return {
-        "receipt_seq": receipt.get("seq"),
-        "receipt_digest": receipt.get("digest"),
-        "measured_energy": measured,
-        "controls": controls,
-        "disclaimer": (
-            "This is machine-readable EVIDENCE toward the listed controls, not a "
-            "conformity assessment, certification, or safety guarantee. A receipt "
-            "documents what happened; it does not by itself make a system compliant."
-        ),
-        "doctrine": ATTEST_DOCTRINE,
+    # A governed-inference receipt always logs (hash chain), is tamper-evident,
+    # and records an advisory governance decision; energy is capability-gated.
+    capabilities = {
+        "logging": True,
+        "integrity": True,
+        "governance": True,
+        "energy": measured,
     }
+    ev = a.compliance_evidence(
+        capabilities=capabilities,
+        subject_digest=receipt.get("digest"),
+        extra={
+            "receipt_seq": receipt.get("seq"),
+            "receipt_digest": receipt.get("digest"),
+            "doctrine": ATTEST_DOCTRINE,
+        },
+    )
+    return ev
 
 
 def attest(
@@ -270,13 +198,14 @@ def attest(
 def verify_statement(
     statement: Dict[str, Any],
     receipt: Dict[str, Any],
-) -> Any:
+) -> Tuple[bool, str]:
     """Confirm *statement* is bound to *receipt*. Returns ``(ok, reason)``.
 
     Re-derives the receipt body digest and checks it matches BOTH the receipt's
     own ``digest`` and the Statement subject digest — so an attestation cannot
     drift from, or be swapped away from, the exact record it claims to describe.
     """
+    a = _shared()
     try:
         body = _receipt_body(receipt)
     except KeyError as exc:  # receipt missing a hashed field
@@ -284,15 +213,9 @@ def verify_statement(
     recomputed = _body_digest(body)
     if receipt.get("digest") != recomputed:
         return (False, "receipt-digest-mismatch")
-    if statement.get("_type") != IN_TOTO_STATEMENT_TYPE:
-        return (False, "not-an-intoto-statement")
-    if statement.get("predicateType") != SZL_PREDICATE_TYPE:
-        return (False, "unexpected-predicate-type")
-    subjects = statement.get("subject") or []
-    subj_digests = [s.get("digest", {}).get("sha256") for s in subjects]
-    if recomputed not in subj_digests:
-        return (False, "subject-digest-not-bound-to-receipt")
-    return (True, "ok")
+    return a.verify_statement(
+        statement, expected_digest=recomputed, predicate_type=SZL_PREDICATE_TYPE
+    )
 
 
 def to_json(obj: Dict[str, Any]) -> str:

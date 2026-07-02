@@ -20,6 +20,6 @@ jobs:
       - name: Install package + signing lib
         run: |
           pip install -e ".[test]"
-          pip install "git+https://github.com/szl-holdings/szl-receipt.git@v0.1.0"
+          pip install "git+https://github.com/szl-holdings/szl-receipt.git@v0.2.0"
       - name: Run pytest
         run: pytest -q

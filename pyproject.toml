@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "governed-inference-meter"
-version = "0.2.0"
+version = "0.3.0"
 description = "Energy-metered, governed inference receipts: NVML joules, tokens/joule, an advisory policy gate, and a tamper-evident SHA-256 hash-chained receipt. Honest by design — MEASURED only with NVML."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -43,9 +43,10 @@ dependencies = []
 gpu = ["pynvml>=11.0.0"]
 # torch is optional and only used to synchronize CUDA around the metered call.
 torch = ["torch"]
-# Optional DSSE/ECDSA-P256 signing of receipts via the shared szl-receipt lib.
-# Core stays zero-hard-dependency: signing is opt-in and import is lazy.
-sign = ["szl-receipt>=0.1.0"]
+# Optional DSSE/ECDSA-P256 signing AND in-toto/SLSA + EU AI Act / NIST AI RMF
+# attestation of receipts, both via the shared szl-receipt lib (one source of
+# truth). Core stays zero-hard-dependency: these are opt-in and imported lazily.
+sign = ["szl-receipt>=0.2.0"]
 test = ["pytest"]
 
 [project.urls]

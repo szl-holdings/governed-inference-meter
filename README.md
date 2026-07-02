@@ -235,6 +235,53 @@ Honest boundaries (doctrine):
 
 ---
 
+## Canonical PCGI receipt (spine fold)
+
+The meter is also a first-class **Proof-Carrying Governed Intelligence (PCGI)**
+receipt producer on the org-canonical [`szl-receipt`](https://huggingface.co/SZLHOLDINGS)
+spine. One call folds a metered inference into a single signed receipt that binds
+**model id + input digest + output digest + governing policy id + energy** — the
+same shape every other decision producer emits, so provenance unifies.
+
+```python
+import governed_inference_meter as gim
+from szl_receipt import generate_keypair
+
+priv, pub = generate_keypair()   # or sign_key=None for UNSIGNED-honest
+
+# End-to-end: meter the call AND emit ONE canonical szl-receipt for it.
+env, out = gim.meter_szl_receipt(
+    run, args=("hi",), model="my-llm",
+    policy_id="default-allow", sign_key=priv, organ="meter",
+)
+ok, why = gim.verify_szl_receipt(env, pub)      # -> (True, "ok")
+stmt = gim.to_statement(env)                     # in-toto Statement v1, SLSA-shaped
+ok2, _ = gim.verify_szl_statement(stmt, env)     # bound to this exact receipt
+
+# Or fold an existing meter receipt you already have:
+rec, out = gim.meter(run, args=("hi",), model="my-llm", tokens_in=2, tokens_out=7)
+env = gim.from_meter_receipt(rec, input="hi", output=out, policy_id="default-allow")
+```
+
+Honest boundaries (doctrine):
+
+- Reuses szl-receipt's **canonicalization + signing + in-toto shapes** — it does
+  **not** invent a new receipt shape.
+- **Energy** is bound **verbatim** only when the meter actually measured it
+  (NVML present). Otherwise `energy.joules` is the literal string
+  **`"UNAVAILABLE"`** and `energy.measured` is `False` — the meter is the one
+  place in the spine where energy *can* be real, and it is never fabricated.
+- The canonical body is **deterministic**: identical inputs serialize to
+  byte-identical canonical JSON (no timestamps in the body).
+- Keyless => **UNSIGNED-honest** (`signed=False`); a signature is never faked.
+- The receipt is **evidence** binding a decision, **not** a proof the model's
+  output is correct.
+
+Requires the shared `szl-receipt` library (install extra `[sign]`); the import is
+lazy, so importing this package stays zero-hard-dependency.
+
+---
+
 ## What's in the repo
 
 ```
@@ -245,10 +292,12 @@ build/torch-universal/governed_inference_meter/
   _receipt.py     # SHA-256 hash-chained, tamper-evident receipts
   _policy.py      # advisory policy gate (allow_all default, fail-closed)
   _attest.py      # in-toto/SLSA-shaped Statements + EU AI Act / NIST AI RMF evidence
+  _spine.py       # PCGI spine fold: metered inference -> ONE canonical szl-receipt
   metadata.json
 pyproject.toml                              # also pip-installable from source
 tests/test_meter.py                         # runs on CPU, no GPU needed
 tests/test_attest.py                        # attestation + compliance, no GPU needed
+tests/test_spine.py                         # canonical PCGI receipt fold, no GPU needed
 LICENSE                                     # Apache-2.0
 ```
 

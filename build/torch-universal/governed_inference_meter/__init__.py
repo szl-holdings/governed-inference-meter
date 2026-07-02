@@ -76,6 +76,20 @@ from ._energy import (
 )
 from ._policy import ALLOW, DENY, PolicyResult, allow_all, deny_all, evaluate
 from ._receipt import ReceiptChain, default_chain
+from ._spine import (
+    CANONICAL_KIND,
+    ENERGY_UNAVAILABLE,
+    PREDICATE_TYPE,
+    SPEC_VERSION,
+    canonical_receipt_body,
+    digest,
+    emit_szl_receipt,
+    from_meter_receipt,
+    meter_szl_receipt,
+    to_statement,
+    verify_szl_receipt,
+    verify_szl_statement,
+)
 
 __all__ = [
     "meter",
@@ -104,6 +118,19 @@ __all__ = [
     "MODE_POWER_INTEGRAL",
     "ALLOW",
     "DENY",
+    # PCGI spine fold — canonical szl-receipt for a metered inference.
+    "emit_szl_receipt",
+    "from_meter_receipt",
+    "meter_szl_receipt",
+    "canonical_receipt_body",
+    "to_statement",
+    "verify_szl_receipt",
+    "verify_szl_statement",
+    "digest",
+    "CANONICAL_KIND",
+    "PREDICATE_TYPE",
+    "SPEC_VERSION",
+    "ENERGY_UNAVAILABLE",
     "__version__",
 ]
 

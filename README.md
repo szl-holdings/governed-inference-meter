@@ -16,6 +16,12 @@ tags:
 
 # governed-inference-meter
 
+> # ⚠️ DEPRECATED — consolidated into [`szl-energy-attest`](https://github.com/szl-holdings/szl-energy-attest)
+>
+> **This repo is DEPRECATED (Wave D consolidation).** Its unique code (the **live inference metering** path — power-integral / trapezoidal energy fallback, `capability_report`, the advisory policy gate, the `meter()` / `metered()` wrappers, the tokens-per-joule `ReceiptChain`, and `selfcheck`) has been **folded into the canonical energy package** [`szl-holdings/szl-energy-attest`](https://github.com/szl-holdings/szl-energy-attest) under the `szl_energy_attest.inference_meter` subpackage. **Canonical: `szl-energy-attest`.**
+>
+> The attestation / spine / signing code was **not** copied because `szl-energy-attest` already provides it (deduped). Nothing was deleted; this repo is kept intact and reversible. **Archiving is a later founder step.** See [`DEPRECATED.md`](./DEPRECATED.md) for the migration guide. Λ remains **Conjecture 1 (advisory, uniqueness OPEN)** — never upgraded to proven.
+
 **Energy-metered, governed inference receipts.** A lightweight, dependency-light
 Python utility (and Hugging Face *universal* kernel) that wraps any inference
 call and emits a **governed, energy-metered, tamper-evident receipt**:

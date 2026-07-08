@@ -163,16 +163,35 @@ class ReceiptChain:
     def verify(self):
         """Re-walk the chain. Returns ``(ok: bool, depth: int, first_break: int)``.
 
-        ``first_break`` is the seq of the first broken record, or ``-1`` if OK.
+        ``first_break`` is the index of the first broken record, or ``-1`` if OK.
+
+        Hardened against adversarial / malformed records:
+
+        * A tampered record that is MISSING a canonical body field (or whose
+          ``digest`` / ``prev`` key was removed) is reported as a break — it
+          never raises an uncaught ``KeyError`` out of the audit path. Removing
+          a field is tampering, so verification must fail cleanly, not crash.
+        * The monotonic append-only counter is enforced: each record's own
+          ``seq`` must equal its position. A re-digested forgery that renumbers
+          or reorders records is caught even when its internal ``digest`` and
+          ``prev`` links are self-consistent.
         """
         with self._lock:
             prev = _GENESIS
+            n = len(self._records)
             for i, rec in enumerate(self._records):
-                body = {k: rec[k] for k in _BODY_FIELDS}
-                if rec["prev"] != prev or rec["digest"] != _digest_body(body):
-                    return (False, len(self._records), i)
+                try:
+                    body = {k: rec[k] for k in _BODY_FIELDS}
+                    seq_ok = int(rec["seq"]) == i
+                    prev_ok = rec["prev"] == prev
+                    digest_ok = rec["digest"] == _digest_body(body)
+                except (KeyError, TypeError, ValueError):
+                    # Missing/malformed field on a record == tamper, not a crash.
+                    return (False, n, i)
+                if not (seq_ok and prev_ok and digest_ok):
+                    return (False, n, i)
                 prev = rec["digest"]
-            return (True, len(self._records), -1)
+            return (True, n, -1)
 
 
 # Module-level default chain (opt-in: only written when you use the default).

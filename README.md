@@ -20,9 +20,28 @@ tags:
 
 > # ⚠️ DEPRECATED — consolidated into [`szl-energy-attest`](https://github.com/szl-holdings/szl-energy-attest)
 >
-> **This repo is DEPRECATED (Wave D consolidation).** Its unique code (the **live inference metering** path — power-integral / trapezoidal energy fallback, `capability_report`, the advisory policy gate, the `meter()` / `metered()` wrappers, the tokens-per-joule `ReceiptChain`, and `selfcheck`) has been **folded into the canonical energy package** [`szl-holdings/szl-energy-attest`](https://github.com/szl-holdings/szl-energy-attest) under the `szl_energy_attest.inference_meter` subpackage. **Canonical: `szl-energy-attest`.**
+> **This repository is deprecated.** Its live inference meter and meter-specific
+> attestation, hardened receipt-chain, PCGI spine, and signing-facing compatibility
+> APIs were folded into the canonical
+> [`szl_energy_attest.inference_meter`](https://github.com/szl-holdings/szl-energy-attest/tree/4d8d105c3d5ea67b5eb25826e8a2a35ca35f4043/szl_energy_attest/inference_meter)
+> package in verified merge
+> [`4d8d105c3d5ea67b5eb25826e8a2a35ca35f4043`](https://github.com/szl-holdings/szl-energy-attest/commit/4d8d105c3d5ea67b5eb25826e8a2a35ca35f4043).
 >
-> The attestation / spine / signing code was **not** copied because `szl-energy-attest` already provides it (deduped). Nothing was deleted; this repo is kept intact and reversible. **Archiving is a later founder step.** See [`DEPRECATED.md`](./DEPRECATED.md) for the migration guide. Λ remains **Conjecture 1 (advisory, uniqueness OPEN)** — never upgraded to proven.
+> Three legacy modules (`_energy.py`, `_policy.py`, `_receipt.py`) are exact
+> hash-preserving copies; `_attest.py` and `_spine.py` carry only bounded
+> package/import and install-guidance rewrites. The immutable
+> [`MIGRATION_PROVENANCE.json`](https://github.com/szl-holdings/szl-energy-attest/blob/4d8d105c3d5ea67b5eb25826e8a2a35ca35f4043/MIGRATION_PROVENANCE.json)
+> records every source and destination digest, and the
+> [migration regressions](https://github.com/szl-holdings/szl-energy-attest/blob/4d8d105c3d5ea67b5eb25826e8a2a35ca35f4043/tests/test_inference_meter_migration.py)
+> verify that boundary.
+>
+> **Boundary:** the successor's root energy receipt remains a different schema;
+> compatibility does not imply schema equality, a configured signing key, or a
+> signed receipt. This legacy repository and its Hugging Face artifact remain
+> readable for provenance and rollback, but are not the target for new
+> integrations. Archiving requires a separate owner decision after pointer and
+> inbound-link gates are evidenced. See [`DEPRECATED.md`](./DEPRECATED.md).
+> Λ remains **Conjecture 1 (advisory, uniqueness OPEN)** — never upgraded to proven.
 
 **Energy-metered, governed inference receipts.** A lightweight, dependency-light
 Python utility (and Hugging Face *universal* kernel) that wraps any inference

@@ -51,7 +51,9 @@ test = ["pytest"]
 
 [project.urls]
 Homepage = "https://a-11-oy.com"
+Repository = "https://github.com/szl-holdings/governed-inference-meter"
 "Hugging Face" = "https://huggingface.co/SZLHOLDINGS/governed-inference-meter"
+Successor = "https://github.com/szl-holdings/szl-energy-attest"
 
 [tool.setuptools]
 package-dir = { "" = "build/torch-universal" }

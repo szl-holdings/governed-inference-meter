@@ -123,6 +123,8 @@ python -m pip install "git+https://github.com/szl-holdings/szl-energy-attest.git
 
 ```bash
 python -m pip install kernels
+# Optional: real GPU energy measurement requires NVML bindings.
+python -m pip install pynvml
 ```
 
 ```python

@@ -43,6 +43,26 @@ tags:
 > inbound-link gates are evidenced. See [`DEPRECATED.md`](./DEPRECATED.md).
 > Λ remains **Conjecture 1 (advisory, uniqueness OPEN)** — never upgraded to proven.
 
+## Artifact truth card
+
+| Field | Truthful classification |
+|---|---|
+| Lifecycle | **Deprecated compatibility artifact.** Retained for provenance and rollback; new integrations belong in `szl-energy-attest`. |
+| Artifact type | **Executable software**, not trained weights, not a model benchmark, and not a formal proof. |
+| Hub role | Legacy Kernel Hub distribution/mirror. Its model-style listing is packaging, not a trained-model claim. |
+| Evidence | Source, CPU-capable checks, receipt verification, migration digests, and an immutable loading contract in the successor repository. |
+| Measurement | `MEASURED` only with a fresh supported NVML reading. Unmeasured base meter/attestation receipts retain null joule fields; canonical spine receipts instead emit `energy.joules = "UNAVAILABLE"`. |
+| Limits | Hashes show internal consistency, not authorship; policies are host-enforced; this repository receives no new feature work. |
+
+**Investor value.** The retained artifact preserves migration evidence and a
+stable audit trail without presenting a deprecated package as the current
+product lane.
+
+**Developer/evaluator path.** Start with the
+[`szl-energy-attest`](https://github.com/szl-holdings/szl-energy-attest)
+successor. Evaluate this repository only when reproducing a legacy integration,
+and pin the immutable Hub revision declared by the successor's loading contract.
+
 **Energy-metered, governed inference receipts.** A lightweight, dependency-light
 Python utility (and Hugging Face *universal* kernel) that wraps any inference
 call and emits a **governed, energy-metered, tamper-evident receipt**:
@@ -60,12 +80,9 @@ It is the energy + governance counterpart to
 [a11oy](https://a-11-oy.com) governed-AI platform: **receipts, not capability
 claims.**
 
-> **Why this exists.** Browse the [Kernel Hub](https://huggingface.co/models?other=kernel)
-> and you find performance kernels — attention, activations, GEMM, norms. There
-> is **no energy-metering + governance kernel**. Teams running inference in
-> sovereign, regulated, or cost/carbon-sensitive contexts measure tokens/joule
-> and keep audit trails *by hand*. This utility does both in one wrapped call,
-> and degrades honestly when no GPU energy readback is available.
+> **Why this remains available.** Existing integrations may still need to
+> reproduce the legacy API and receipt behavior. The repository is retained for
+> that bounded purpose; it makes no ecosystem-wide novelty claim.
 
 ---
 
@@ -96,29 +113,44 @@ quantity) is Conjecture 1 — advisory, not a theorem. Trust is never 100%.**
 
 ## Install / load
 
-**From the Hugging Face Hub** (universal kernel — runs on CPU and CUDA):
+**Recommended successor:**
+
+```bash
+python -m pip install "git+https://github.com/szl-holdings/szl-energy-attest.git"
+```
+
+**Legacy compatibility load** (review the immutable contract first):
+
+```bash
+python -m pip install kernels
+# Optional: real GPU energy measurement requires NVML bindings.
+python -m pip install pynvml
+```
 
 ```python
 from kernels import get_kernel
-gim = get_kernel("SZLHOLDINGS/governed-inference-meter")
+
+gim = get_kernel(
+    "SZLHOLDINGS/governed-inference-meter",
+    revision="6d546bfc6591b44ae5eb57d1209678454e52a3f5",
+    trust_remote_code=True,
+)
 ```
 
-**From PyPI-style source** (zero hard dependencies; add `pynvml` for real
-energy):
-
-```bash
-pip install kernels            # to load via get_kernel
-# real GPU energy measurement additionally needs NVML bindings:
-pip install pynvml
-```
-
----
+The pin is the retained compatibility revision declared by the successor
+repository. Advance it only through the authorized publication and readback
+process.
 
 ## Usage
 
 ```python
 from kernels import get_kernel
-gim = get_kernel("SZLHOLDINGS/governed-inference-meter")
+
+gim = get_kernel(
+    "SZLHOLDINGS/governed-inference-meter",
+    revision="6d546bfc6591b44ae5eb57d1209678454e52a3f5",
+    trust_remote_code=True,
+)
 
 print(gim.__version__)
 print(gim.capability_report())   # what energy measurement is possible here

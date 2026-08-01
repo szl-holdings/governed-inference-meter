@@ -51,7 +51,7 @@ tags:
 | Artifact type | **Executable software**, not trained weights, not a model benchmark, and not a formal proof. |
 | Hub role | Legacy Kernel Hub distribution/mirror. Its model-style listing is packaging, not a trained-model claim. |
 | Evidence | Source, CPU-capable checks, receipt verification, migration digests, and an immutable loading contract in the successor repository. |
-| Measurement | `MEASURED` only with a fresh supported NVML reading; otherwise `UNAVAILABLE`/`unmeasured` with null energy fields. |
+| Measurement | `MEASURED` only with a fresh supported NVML reading. Unmeasured base meter/attestation receipts retain null joule fields; canonical spine receipts instead emit `energy.joules = "UNAVAILABLE"`. |
 | Limits | Hashes show internal consistency, not authorship; policies are host-enforced; this repository receives no new feature work. |
 
 **Investor value.** The retained artifact preserves migration evidence and a
@@ -139,7 +139,12 @@ process.
 
 ```python
 from kernels import get_kernel
-gim = get_kernel("SZLHOLDINGS/governed-inference-meter")
+
+gim = get_kernel(
+    "SZLHOLDINGS/governed-inference-meter",
+    revision="6d546bfc6591b44ae5eb57d1209678454e52a3f5",
+    trust_remote_code=True,
+)
 
 print(gim.__version__)
 print(gim.capability_report())   # what energy measurement is possible here

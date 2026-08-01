@@ -121,6 +121,10 @@ python -m pip install "git+https://github.com/szl-holdings/szl-energy-attest.git
 
 **Legacy compatibility load** (review the immutable contract first):
 
+```bash
+python -m pip install kernels
+```
+
 ```python
 from kernels import get_kernel
 

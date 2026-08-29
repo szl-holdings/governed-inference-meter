@@ -22,7 +22,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Assert HF model == GitHub mirror set
-        # Informational on PR (main may legitimately lead HF between tagged releases);
-        # authoritative on schedule + manual dispatch.
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        # Informational on PR (main may legitimately lead HF between tagged releases).
+        # This repo is DEPRECATED (see DEPRECATED.md); scheduled drift must not
+        # paint the kernel CI red. Manual dispatch remains the authoritative check.
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         run: python scripts/hf_mirror_drift_check.py

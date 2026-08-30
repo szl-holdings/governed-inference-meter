@@ -1,35 +1,60 @@
 name: hf-mirror
 
-# Mirror the tracked kernel package to HF model SZLHOLDINGS/governed-inference-meter
-# on every version tag (vX.Y.Z), published release, and manual dispatch. GitHub stays
-# the source-of-truth; the Kernel Hub copy (loaded via get_kernel(...)) can never lag.
+# Privileged publication is intentionally a separate, protected-main-only
+# transaction. This workflow is never selected from a tag, release, or branch.
 on:
-  push:
-    tags:
-      - "v*.*.*"
-  release:
-    types: [published]
-  workflow_dispatch:
+  repository_dispatch:
+    types: [hf-mirror-source-bound]
 
 permissions:
   contents: read
 
 concurrency:
-  group: hf-mirror
+  group: hf-mirror-protected-main
   cancel-in-progress: false
 
 jobs:
-  mirror:
-    runs-on: ubuntu-latest
+  publish:
+    if: >-
+      github.repository == 'szl-holdings/governed-inference-meter' &&
+      github.event_name == 'repository_dispatch' &&
+      github.event.action == 'hf-mirror-source-bound' &&
+      github.ref == 'refs/heads/main' &&
+      github.sha == github.workflow_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      HF_HOME: ${{ runner.temp }}/hf-home
+      HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_NO_CACHE_DIR: "1"
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+      - name: Checkout the admitted protected-main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          python-version: "3.12"
-      - run: pip install "huggingface_hub>=0.24"
-      - name: Mirror kernel to HF model
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+          submodules: false
+      - name: Set up exact Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12.14"
+          check-latest: false
+      - name: Verify offline mirror contract before dependency or credential access
+        run: python -I -B tests/test_hf_mirror_contract.py
+      - name: Install the reviewed binary-only HF client closure
+        run: >-
+          python -m pip install --disable-pip-version-check --no-cache-dir
+          --only-binary=:all: --require-hashes --no-deps
+          -r requirements/hf-mirror.lock
+      - name: Verify locked environment
+        run: |
+          python -m pip check
+          python -I -B -c "import importlib.metadata as m; assert m.version('huggingface-hub') == '1.29.0'"
+      - name: Publish once with parent CAS and immutable anonymous readback
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python scripts/hf_mirror.py --token "$HF_TOKEN"
-      - name: Attest model == source
-        run: python scripts/hf_mirror_drift_check.py
+        run: python -I -B scripts/hf_mirror.py

@@ -24,8 +24,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      HF_HOME: ${{ runner.temp }}/hf-home
-      HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
       HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PIP_NO_CACHE_DIR: "1"
@@ -56,5 +54,7 @@ jobs:
           python -I -B -c "import importlib.metadata as m; assert m.version('huggingface-hub') == '1.29.0'"
       - name: Publish once with parent CAS and immutable anonymous readback
         env:
+          HF_HOME: ${{ runner.temp }}/hf-home
+          HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python -I -B scripts/hf_mirror.py

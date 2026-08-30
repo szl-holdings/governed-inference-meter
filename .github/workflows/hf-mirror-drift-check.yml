@@ -48,8 +48,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      HF_HOME: ${{ runner.temp }}/hf-home-empty
-      HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
       HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
       HF_TOKEN: ""
       HUGGING_FACE_HUB_TOKEN: ""
@@ -83,4 +81,7 @@ jobs:
           python -m pip check
           python -I -B -c "import importlib.metadata as m; assert m.version('huggingface-hub') == '1.29.0'"
       - name: Verify closed payload at one immutable HF revision
+        env:
+          HF_HOME: ${{ runner.temp }}/hf-home-empty
+          HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
         run: python -I -B scripts/hf_mirror_drift_check.py

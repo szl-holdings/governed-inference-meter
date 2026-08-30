@@ -1,29 +1,86 @@
 name: hf-mirror-drift-check
 
-# Independently assert the live HF model == the GitHub mirror set (sha256).
-# Informational on push/PR (the model only updates on tagged mirror runs, so main
-# may legitimately lead between releases); authoritative on a tag and daily.
+# Pull requests prove the offline contract. The scheduled protected-main job is
+# the authoritative anonymous immutable-revision readback.
 on:
   pull_request:
-    paths: ["build/**", "build.toml", "pyproject.toml", "README.md", "scripts/hf_mirror_drift_check.py"]
+    paths:
+      - ".github/workflows/hf-mirror.yml"
+      - ".github/workflows/hf-mirror-drift-check.yml"
+      - "scripts/hf_mirror.py"
+      - "scripts/hf_mirror_drift_check.py"
+      - "requirements/hf-mirror.lock"
+      - "tests/test_hf_mirror_contract.py"
   schedule:
     - cron: "23 6 * * *"
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  drift-check:
-    runs-on: ubuntu-latest
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+      - name: Checkout the exact PR merge commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          python-version: "3.12"
-      - name: Assert HF model == GitHub mirror set
-        # Informational on PR (main may legitimately lead HF between tagged releases).
-        # This repo is DEPRECATED (see DEPRECATED.md); scheduled drift must not
-        # paint the kernel CI red. Manual dispatch remains the authoritative check.
-        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
-        run: python scripts/hf_mirror_drift_check.py
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+          submodules: false
+      - name: Set up exact Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12.14"
+          check-latest: false
+      - name: Verify offline mirror contract
+        run: python -I -B tests/test_hf_mirror_contract.py
+
+  live-readback:
+    if: >-
+      github.event_name == 'schedule' &&
+      github.repository == 'szl-holdings/governed-inference-meter' &&
+      github.ref == 'refs/heads/main' &&
+      github.sha == github.workflow_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      HF_HOME: ${{ runner.temp }}/hf-home-empty
+      HF_HUB_CACHE: ${{ runner.temp }}/hf-cache
+      HF_HUB_DISABLE_IMPLICIT_TOKEN: "1"
+      HF_TOKEN: ""
+      HUGGING_FACE_HUB_TOKEN: ""
+      HUGGINGFACE_TOKEN: ""
+      HUGGINGFACEHUB_API_TOKEN: ""
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_NO_CACHE_DIR: "1"
+    steps:
+      - name: Checkout the admitted protected-main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+          submodules: false
+      - name: Set up exact Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12.14"
+          check-latest: false
+      - name: Verify offline mirror contract
+        run: python -I -B tests/test_hf_mirror_contract.py
+      - name: Install the reviewed binary-only HF client closure
+        run: >-
+          python -m pip install --disable-pip-version-check --no-cache-dir
+          --only-binary=:all: --require-hashes --no-deps
+          -r requirements/hf-mirror.lock
+      - name: Verify locked environment
+        run: |
+          python -m pip check
+          python -I -B -c "import importlib.metadata as m; assert m.version('huggingface-hub') == '1.29.0'"
+      - name: Verify closed payload at one immutable HF revision
+        run: python -I -B scripts/hf_mirror_drift_check.py
